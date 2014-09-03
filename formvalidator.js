@@ -24,21 +24,22 @@ var protoValid = Class.create({
             validateOnBlur: true,
             passwordToggles: false,
             extend: null
-        }
+        };
         this.internals = {
             event : null,
             form  : null,
             validated : []
-        }
+        };
         Object.extend(this.options, options || {});
         this.internals.form = $(this.options.form);
         if(!this.internals.form) return false;
         this.internals.form.observe("submit",function(ev){
-            this.internals.event = ev;
+            this.internals.event = ev;  // this.internals.event.type = "submit"
             this.validateForm();
         }.bind(this));
         if(this.options.validateOnBlur === true){
             this.internals.form.getElements().invoke("observe","blur", function(ev) {
+                this.internals.event = ev;  // this.internals.event.type = "blur"
                 this.validateElement(ev.element());
             }.bind(this));
         }
@@ -87,12 +88,9 @@ var protoValid = Class.create({
      * Checks first if elememt is empty, if not empty it validates against Regular Expression
      */
     validateOptional: function(el){
-        if ($F(el).strip())
-        {
+        if ($F(el).strip()) {
             this.validateRegexp(el);
-        }
-        else
-        {
+        } else  {
             this.passValidation(el);
         }
     },
@@ -103,9 +101,17 @@ var protoValid = Class.create({
      */
     validateRequired: function(el){
         if(el.type == 'checkbox'){
-            (!el.checked) ? this.failValidation(el) : this.passValidation(el);
+            if(!el.checked){
+                this.failValidation(el);
+            } else {
+                this.passValidation(el);
+            }
         }else{
-            (!$F(el).strip()) ? this.failValidation(el) : this.validateRegexp(el);
+            if(!$F(el).strip()){
+                this.failValidation(el);
+            } else {
+                this.validateRegexp(el);
+            }
         }
     },
 
@@ -131,18 +137,13 @@ var protoValid = Class.create({
      * Validate input using a regular expression
      */
     validateRegexp: function(el){
-        for(var regex in (this.options.regexes))
-        {
-            if(el.hasClassName(regex))
-            {
+        for(var regex in (this.options.regexes)){
+            if(el.hasClassName(regex)){
                 var regexp = new RegExp(this.options.regexes[regex]);
                 var match = regexp.exec($F(el));
-                if (match != null) 
-                {
+                if (match !== null) {
                     this.passValidation(el);
-                }
-                else
-                {
+                } else {
                     this.failValidation(el);
                 }
             }
@@ -156,7 +157,7 @@ var protoValid = Class.create({
         el.className.match(/(?:^|\s+)combi-(\d+)(?:\s|$)/);
         var ocid = RegExp.$1;
         var cont = true;
-        var combos = this.internals.form.select('.combi-'+ocid)
+        var combos = this.internals.form.select('.combi-'+ocid);
         combos.each(function(elm){
             if(this.internals.validated.indexOf(elm.id) == -1){ // field has not yet been validated
                 this.validateElement(elm);
@@ -184,12 +185,15 @@ var protoValid = Class.create({
         var val = RegExp.$1;
         var cont = true;
         var duplicates = this.internals.form.select('.dupe-'+val);
+
+        // only check duplicate validation if both fields have been validated already
         duplicates.each(function(elm){
-            if(this.internals.validated.indexOf(elm.id) == -1){ // field has not yet been validated
-                this.validateElement(elm);
+            if( this.internals.validated.indexOf(elm.id) == -1 ){ // field has not yet been validated
                 cont = false;
             }
         },this);
+
+        // check duplicate values match
         if(cont){
             var value = null;
             duplicates.each(function(e){
@@ -200,7 +204,7 @@ var protoValid = Class.create({
             }else{
                 this.passElementValidations(duplicates);
             }
-        }else{
+        }else{ // reset both to be valid
             this.styleValidationResult(el,this.options.valid);
         }
     },
@@ -250,15 +254,16 @@ var protoValid = Class.create({
      */
     styleValidationResult: function(el,newclass){
         var testclass = (newclass == this.options.valid) ? this.options.notValid : this.options.valid;
+        var errEl = "";
         if(!$(el).hasClassName(newclass)){
             $(el).removeClassName(testclass).addClassName(newclass);
         }
         if(newclass == this.options.notValid){
-            var errEl = $(el).next(this.options.msgElement);
+            errEl = $(el).next(this.options.msgElement);
             $(errEl).update($(el).title).hide();
             new Effect[this.options.effectShow](errEl);
         }else{
-            var errEl = $(el).next(this.options.msgElement);
+            errEl = $(el).next(this.options.msgElement);
             if($(errEl).visible()){
                  new Effect[this.options.effectHide](errEl);
             }
