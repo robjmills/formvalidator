@@ -22,6 +22,7 @@ var protoValid = Class.create({
                 number: "\\b\\d+\\b"
             },
             validateOnBlur: true,
+            clearOnFocus: false,
             passwordToggles: false,
             extend: null
         };
@@ -41,6 +42,15 @@ var protoValid = Class.create({
             this.internals.form.getElements().invoke("observe","blur", function(ev) {
                 this.internals.event = ev;  // this.internals.event.type = "blur"
                 this.validateElement(ev.element());
+            }.bind(this));
+        }
+        if(this.options.clearOnFocus === true){
+            this.internals.form.getElements().invoke("observe","focus", function(ev) {
+                var el = ev.element();
+                if(el.hasClassName(this.options.notValid)) {
+                    $(el).next(this.options.msgElement).hide();
+                }
+                el.removeClassName(this.options.valid).removeClassName(this.options.notValid);
             }.bind(this));
         }
         if(this.options.passwordToggles === true){
@@ -188,8 +198,9 @@ var protoValid = Class.create({
 
         // only check duplicate validation if both fields have been validated already
         duplicates.each(function(elm){
-            if( this.internals.validated.indexOf(elm.id) == -1 ){ // field has not yet been validated
+            if(this.internals.validated.indexOf(elm.id) == -1){ // field has not yet been validated
                 cont = false;
+                throw $break;
             }
         },this);
 
@@ -204,7 +215,7 @@ var protoValid = Class.create({
             }else{
                 this.passElementValidations(duplicates);
             }
-        }else{ // reset both to be valid
+        }else{
             this.styleValidationResult(el,this.options.valid);
         }
     },
